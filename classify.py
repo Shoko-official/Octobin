@@ -62,12 +62,12 @@ def load_model_and_labels():
 
 
 # --- PRE-TRAITEMENT ------------------------------------------------------------
-def preprocess(frame: np.ndarray) -> np.ndarray:
-    """Redimensionne et normalise une frame pour MobileNetV2."""
+def preprocess(frame):
+    """Préparation conforme à MobileNetV2"""
     img = cv2.resize(frame, IMG_SIZE)
     img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-    img = img.astype(np.float32) / 255.0
-    return np.expand_dims(img, axis=0)
+    img = img.astype(np.float32)
+    return np.expand_dims(preprocess_input(img), axis=0)
 
 
 # --- PREDICTION ----------------------------------------------------------------
@@ -243,19 +243,31 @@ def run():
         if key == ord("q"):
             break
 
-        # -- CAPTURER & CLASSIFIER --
+        # -- CAPTURER & CLASSIFIER (Stabilise) --
         elif key == ord(" "):
-            ret, frame = cap.read()
-            if ret:
-                captured_frame = frame.copy()
-                result = predict(model, captured_frame, labels)
-                pred, conf, _ = result
+            print("[ANALYSE] Stabilisation du résultat (Moyennage sur 5 frames)...")
+            all_probs = []
+            for _ in range(5):
+                ret, f = cap.read()
+                if not ret: break
+                h, w = f.shape[:2]
+                crop = f[h//2-112:h//2+112, w//2-112:w//2+112]
+                tensor = preprocess(crop)
+                probs = model.predict(tensor, verbose=0)[0]
+                all_probs.append(probs)
+                captured_frame = f.copy()
+
+            if all_probs:
+                avg_probs = np.mean(all_probs, axis=0)
+                idx = np.argmax(avg_probs)
+                pred, conf = labels[idx], float(avg_probs[idx])
+                result = (pred, conf, avg_probs)
                 state = "captured"
 
                 if conf < CONFIDENCE_MIN:
                     print(f"[DOUTE] Confiance faible ({conf*100:.1f}%) -> {pred}. Merci de corriger.")
                 else:
-                    print(f"[PREDICTION] Predit : {pred}  (confiance : {conf*100:.1f}%)")
+                    print(f"[PREDICTION] Predit : {pred}  ({conf*100:.1f}%)")
 
         # -- CORRECTION NUMERIQUE --
         elif state == "captured" and key in touches_valides:
