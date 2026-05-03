@@ -22,7 +22,7 @@ import numpy as np
 import tensorflow as tf
 from tensorflow.keras import layers, Model
 from tensorflow.keras.applications import MobileNetV2
-from tensorflow.keras.preprocessing.image import ImageDataGenerator
+from tensorflow.keras.applications.mobilenet_v2 import preprocess_input
 import matplotlib.pyplot as plt
 
 # --- CONFIG --------------------------------------------------------------------
@@ -107,6 +107,13 @@ def check_data():
 # --- CONSTRUCTION DU MODELE ----------------------------------------------------
 def build_model(num_classes: int) -> Model:
     """MobileNetV2 + tete de classification fine-tunee."""
+    # Augmentation integree au modele
+    data_augmentation = tf.keras.Sequential([
+        layers.RandomFlip("horizontal"),
+        layers.RandomRotation(0.1),
+        layers.RandomZoom(0.1),
+    ])
+
     base = MobileNetV2(
         input_shape=(*IMG_SIZE, 3), #224*224, 3 canaux rgb
         include_top=False, # On retire la couche finale d'origine (qui classait 1000 objets aléatoires)
@@ -116,16 +123,18 @@ def build_model(num_classes: int) -> Model:
     base.trainable = False
 
     inputs = tf.keras.Input(shape=(*IMG_SIZE, 3))
-    x = base(inputs, training=False)
+    x = data_augmentation(inputs)
+    x = preprocess_input(x)
+    x = base(x, training=False)
     x = layers.GlobalAveragePooling2D()(x)
-    x = layers.Dropout(0.3)(x)
-    x = layers.Dense(128, activation="relu")(x)
+    x = layers.Dense(128, activation="relu", kernel_regularizer="l2")(x)
+    x = layers.Dropout(0.5)(x)
     outputs = layers.Dense(num_classes, activation="softmax")(x)
 
     model = Model(inputs, outputs)
     model.compile(
-        optimizer=tf.keras.optimizers.Adam(1e-3),
-        loss="categorical_crossentropy",
+        optimizer=tf.keras.optimizers.Adam(5e-4),
+        loss=tf.keras.losses.CategoricalCrossentropy(label_smoothing=0.1),
         metrics=["accuracy"]
     )
     return model
@@ -135,36 +144,15 @@ def build_model(num_classes: int) -> Model:
 def train():
     check_data()
 
-    # Generateurs d'images
-    train_gen = ImageDataGenerator(
-        rescale=1./255,
-        rotation_range=20,
-        width_shift_range=0.1,
-        height_shift_range=0.1,
-        horizontal_flip=True,
-        zoom_range=0.15,
+    # Pipeline de données performant
+    train_data = tf.keras.utils.image_dataset_from_directory(
+        TRAIN_DIR, image_size=IMG_SIZE, batch_size=BATCH_SIZE, label_mode="categorical"
     )
-    val_gen = ImageDataGenerator(rescale=1./255)
-
-    train_data = train_gen.flow_from_directory(
-        TRAIN_DIR, target_size=IMG_SIZE,
-        batch_size=BATCH_SIZE, class_mode="categorical"
-    )
-    val_data = val_gen.flow_from_directory(
-        VAL_DIR, target_size=IMG_SIZE,
-        batch_size=BATCH_SIZE, class_mode="categorical"
+    val_data = tf.keras.utils.image_dataset_from_directory(
+        VAL_DIR, image_size=IMG_SIZE, batch_size=BATCH_SIZE, label_mode="categorical"
     )
 
-    # --- MODIFICATION ICI : Boucles classiques au lieu de comprehensions ---
-    # 1. Inverser le dictionnaire (clé <-> valeur)
-    label_map = {}
-    for k, v in train_data.class_indices.items():
-        label_map[v] = k
-
-    # 2. Creer la liste des labels dans le bon ordre
-    labels = []
-    for i in range(len(label_map)):
-        labels.append(label_map[i])
+    labels = train_data.class_names
     # ------------------------------------------------------------------------
 
     with open(LABELS_PATH, "w") as f:
@@ -181,20 +169,20 @@ def train():
         train_data, validation_data=val_data,
         epochs=EPOCHS,
         callbacks=[
-            tf.keras.callbacks.EarlyStopping(patience=4, restore_best_weights=True),
-            tf.keras.callbacks.ReduceLROnPlateau(patience=2, factor=0.5),
+            tf.keras.callbacks.EarlyStopping(patience=5, restore_best_weights=True),
+            tf.keras.callbacks.ReduceLROnPlateau(patience=3, factor=0.5),
         ]
     )
 
     # Phase 2 : fine-tuning des 30 dernieres couches
     print("\n[CONFIGURATION] Phase 2 -- Fine-tuning...")
-    model.layers[1].trainable = True  # base = layers[1]
-    for layer in model.layers[1].layers[:-30]:
+    model.layers[4].trainable = True  # base = layers[4] avec l'augmentation
+    for layer in model.layers[4].layers[:-30]:
         layer.trainable = False
 
     model.compile(
         optimizer=tf.keras.optimizers.Adam(1e-5),
-        loss="categorical_crossentropy",
+        loss=tf.keras.losses.CategoricalCrossentropy(label_smoothing=0.1),
         metrics=["accuracy"]
     )
     
