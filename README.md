@@ -21,6 +21,10 @@ pip install -r requirements.txt
    ```bash
    python classify.py
    ```
+3. **App Flask** :
+   ```bash
+   python app.py
+   ```
 
 ## Contrôles (Classification)
 - `ESPACE` : Capturer et classifier.
