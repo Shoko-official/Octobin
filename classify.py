@@ -26,8 +26,6 @@ LABELS_PATH     = "labels.txt"
 CORRECTIONS_DIR = "corrections"   # Images mal classees sauvegardees ici
 IMG_SIZE        = (224, 224)
 CONFIDENCE_MIN  = 0.70          # Seuil de confiance minimal (alors 70 c haut oui mais softmax peut etre trop confiant)
-FINETUNE_LR     = 1e-5
-FINETUNE_EPOCHS = 3
 
 # Couleurs par categorie (BGR)
 COLORS = {
@@ -90,55 +88,6 @@ def save_correction(frame: np.ndarray, true_label: str) -> str:
     return path
 
 
-# --- FINE-TUNING SUR LES CORRECTIONS ------------------------------------------
-def finetune_on_corrections(model, labels: list) -> None:
-    """Re-entraine le modele sur les images corrigees accumulees."""
-    from tensorflow.keras.preprocessing.image import ImageDataGenerator
-
-    if not os.path.exists(CORRECTIONS_DIR):
-        print("[ATTENTION] Aucune correction enregistree.")
-        return
-
-    # --- MODIFICATION : Boucle classique pour compter les images ---
-    total = 0
-    for _, _, fichiers in os.walk(CORRECTIONS_DIR):
-        if fichiers:
-            total += len(fichiers)
-            
-    if total == 0:
-        print("[ATTENTION] Dossier corrections/ vide.")
-        return
-
-    print(f"\n[CONFIGURATION] Fine-tuning sur {total} correction(s)...")
-
-    gen = ImageDataGenerator(rescale=1./255, horizontal_flip=True)
-    data = gen.flow_from_directory(
-        CORRECTIONS_DIR,
-        target_size=IMG_SIZE,
-        batch_size=max(1, min(8, total)),
-        class_mode="categorical",
-        classes=labels,
-    )
-
-    if data.num_classes != len(labels):
-        print("[ATTENTION] Toutes les classes ne sont pas representees dans corrections/. "
-              "Ajoute au moins 1 image par classe ou patiente.")
-        return
-
-    # Degele les dernieres couches
-    model.trainable = True
-    for layer in model.layers[:-10]:
-        layer.trainable = False
-
-    model.compile(
-        optimizer=tf.keras.optimizers.Adam(FINETUNE_LR),
-        loss="categorical_crossentropy",
-        metrics=["accuracy"]
-    )
-    model.fit(data, epochs=FINETUNE_EPOCHS, verbose=1)
-    model.save(MODEL_PATH)
-    print(f"[SUCCES] Modele mis a jour -> {MODEL_PATH}")
-
 
 # --- OVERLAY UI ----------------------------------------------------------------
 def draw_ui(frame, labels, result=None, state="live"):
@@ -181,8 +130,8 @@ def draw_ui(frame, labels, result=None, state="live"):
                         COLORS.get(lbl, DEFAULT_COLOR), 1)
 
     # Instructions permanentes
-    cv2.putText(frame, "[s] Re-train  [q] Quitter",
-                (w - 190, 22), cv2.FONT_HERSHEY_SIMPLEX, 0.42, (180, 180, 180), 1)
+    cv2.putText(frame, "[q] Quitter",
+                (w - 110, 22), cv2.FONT_HERSHEY_SIMPLEX, 0.42, (180, 180, 180), 1)
 
     # Reticule central
     cx, cy = w // 2, h // 2
@@ -210,7 +159,7 @@ def run():
     captured_frame = None      # Frame figee pour la correction
 
     print("\nWebcam ouverte. Place un dechet devant la camera.")
-    print("   [ESPACE] Classifier  |  [1-{}] Corriger  |  [s] Re-train  |  [q] Quitter\n".format(len(labels)))
+    print("   [ESPACE] Classifier  |  [1-{}] Corriger  |  [q] Quitter\n".format(len(labels)))
 
     # --- MODIFICATION : Generer la liste des touches de correction proprement ---
     touches_valides = []
@@ -290,9 +239,6 @@ def run():
             state  = "live"
             result = None
 
-        # -- RE-TRAIN --
-        elif key == ord("s"):
-            finetune_on_corrections(model, labels)
 
     cap.release()
     cv2.destroyAllWindows()
