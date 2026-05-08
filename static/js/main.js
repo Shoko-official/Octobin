@@ -21,6 +21,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const notification    = document.getElementById('toast');
 
     let url_image_actuelle = '';
+    let prediction_actuelle = '';
     let mode_correction    = false;
     let flux_video         = null;
 
@@ -140,6 +141,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (data.error) throw new Error(data.error);
 
             url_image_actuelle = data.image_url;
+            prediction_actuelle = data.prediction;
             texte_prediction.innerHTML = `Analyse : <strong>${data.prediction}</strong> (${(data.confidence * 100).toFixed(0)}%)`;
             overlay_resultat.classList.remove('hidden');
             maj_boutons_classes(data.prediction);
@@ -160,6 +162,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     image_url: url_a_envoyer,
+                    predicted_label: prediction_actuelle,
                     true_label: vrai_label
                 })
             });
