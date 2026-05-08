@@ -1,6 +1,6 @@
-# MARJ - Classification de Déchets
+# Octobin - Classification de Déchets
 
-MARJ est une application de classification de déchets en temps réel utilisant le deep learning (MobileNetV2) et TensorFlow/Keras.
+Octobin est une application de classification de déchets en temps réel utilisant le deep learning (MobileNetV2) et TensorFlow/Keras.
 
 ## Fonctionnalités
 - **Entraînement** : Script complet pour entraîner le modèle sur des données personnalisées.
