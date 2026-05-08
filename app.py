@@ -1,5 +1,6 @@
 import os
 import cv2
+import shutil
 import numpy as np
 import tensorflow as tf
 from flask import Flask, render_template, request, jsonify
@@ -21,6 +22,12 @@ app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 # Creation des repertoires necessaires
 os.makedirs(CORRECTIONS_DIR, exist_ok=True)
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+
+# Pour les stats globales de la session
+stats_session = {
+    'total': 0,
+    'predictions': {}
+}
 
 
 # --- CHARGEMENT ----------------------------------------------------------------
@@ -100,6 +107,10 @@ def classifier():
     
     print(f"[ANALYSE] {nom_fichier} -> Predit : {pred} ({conf*100:.1f}%)")
 
+    # Mise a jour des stats de session
+    stats_session['total'] += 1
+    stats_session['predictions'][pred] = stats_session['predictions'].get(pred, 0) + 1
+
     return jsonify({
         'prediction': pred,
         'confidence': conf,
@@ -130,25 +141,41 @@ def corriger():
     nouveau_chemin = os.path.join(dossier, f"{ts}.jpg")
     
     # On enregistre une copie dans le dossier corrections
-    img = cv2.imread(chemin_local)
-    cv2.imwrite(nouveau_chemin, img)
-    
-    print(f"[SAUVEGARDE] Correction enregistree pour {vrai_label} -> {nouveau_chemin}")
+    try:
+        shutil.copy(chemin_local, nouveau_chemin)
+        print(f"[SAUVEGARDE] Correction enregistree pour {vrai_label} -> {nouveau_chemin}")
+    except Exception as e:
+        print(f"[ERREUR] Impossible de copier le fichier : {e}")
+        return jsonify({'error': str(e)}), 500
 
     return jsonify({'success': True})
 
 
 @app.route('/stats')
 def statistiques():
-    """Retourne le nombre d'images de correction par classe."""
-    stats_data = {}
+    """Retourne les stats de session et le nombre d'images de correction par classe."""
+    global labels
+    labels = charger_labels() 
+    
+    res = {
+        'session_total': stats_session['total'],
+        'by_label': {}
+    }
+    
     for lbl in labels:
         dossier = os.path.join(CORRECTIONS_DIR, lbl)
+        count_corrections = 0
         if os.path.exists(dossier):
-            stats_data[lbl] = len(os.listdir(dossier))
-        else:
-            stats_data[lbl] = 0
-    return jsonify(stats_data)
+            count_corrections = len([f for f in os.listdir(dossier) if os.path.isfile(os.path.join(dossier, f))])
+        
+        count_session = stats_session['predictions'].get(lbl, 0)
+        
+        res['by_label'][lbl] = {
+            'corrections': count_corrections,
+            'session': count_session
+        }
+        
+    return jsonify(res)
 
 
 if __name__ == '__main__':
