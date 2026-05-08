@@ -36,3 +36,4 @@ pip install -r requirements.txt
 - `1-4` : Corriger la classe si l'IA s'est trompée.
 - `S` : Relancer un entraînement rapide sur les corrections.
 - `Q` : Quitter.
+
