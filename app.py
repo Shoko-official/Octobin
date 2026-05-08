@@ -24,24 +24,26 @@ os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
 
 # --- CHARGEMENT ----------------------------------------------------------------
+def charger_labels():
+    """Charge les labels depuis le disque."""
+    if not os.path.exists(LABELS_PATH):
+        print(f"[ERREUR] Labels introuvables : {LABELS_PATH}")
+        return []
+    
+    with open(LABELS_PATH, encoding='utf-8-sig') as f:
+        # On filtre les lignes vides et on strip les espaces
+        labels = [l.strip() for l in f if l.strip()]
+    return labels
+
 def charger_modele_et_labels():
-    """Charge le modele TensorFlow et les labels depuis le disque."""
+    """Charge le modele TensorFlow et les labels."""
     if not os.path.exists(MODEL_PATH):
         print(f"[ERREUR] Modele introuvable : {MODEL_PATH}")
         print("  Lance d'abord : python train.py")
         return None, []
     
-    if not os.path.exists(LABELS_PATH):
-        print(f"[ERREUR] Labels introuvables : {LABELS_PATH}")
-        return None, []
-
     modele = tf.keras.models.load_model(MODEL_PATH)
-    
-    labels = []
-    with open(LABELS_PATH) as f:
-        # --- MODIFICATION : Boucle classique au lieu d'une liste en une ligne ---
-        for ligne in f.readlines():
-            labels.append(ligne.strip())
+    labels = charger_labels()
             
     print(f"[SUCCES] Modele charge -- {len(labels)} classes : {labels}")
     return modele, labels
@@ -65,6 +67,8 @@ def pre_traitement(chemin_img):
 @app.route('/')
 def index():
     """Affiche l'interface web principale."""
+    global labels
+    labels = charger_labels() # Rechargement dynamique pour eviter les problemes
     return render_template('index.html', labels=labels)
 
 

@@ -19,6 +19,7 @@ import cv2
 import numpy as np
 import tensorflow as tf
 from datetime import datetime
+from tensorflow.keras.applications.mobilenet_v2 import preprocess_input
 
 # --- CONFIG --------------------------------------------------------------------
 MODEL_PATH      = "waste_model.keras"
@@ -49,11 +50,8 @@ def load_model_and_labels():
 
     model = tf.keras.models.load_model(MODEL_PATH)
     
-    labels = []
-    with open(LABELS_PATH) as f:
-        # --- MODIFICATION : Boucle classique au lieu d'une liste en une ligne ---
-        for ligne in f.readlines():
-            labels.append(ligne.strip())
+    with open(LABELS_PATH, encoding='utf-8-sig') as f:
+        labels = [l.strip() for l in f if l.strip()]
             
     print(f"[SUCCES] Modele charge -- {len(labels)} classes : {labels}")
     return model, labels

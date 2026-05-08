@@ -36,10 +36,7 @@ IMG_SIZE    = (224, 224)
 BATCH_SIZE  = 16 #lecture par paquet de 16
 EPOCHS      = 15 #Le nombre de fois que l'IA va parcourir l'intégralité du dataset
 
-# Classes de dechets (doivent correspondre aux noms de sous-dossiers !!!!)
-CLASSES = ["papier", "plastique", "verre", "organique"]
-
-# --- CREATION D'UN DATASET FACTICE SI VIDE -------------------------------------
+# --- VERIFICATION DES DONNEES --------------------------------------------------
 def create_sample_data():
     """Cree des images colorees factices si le dossier data/ est vide."""
     print("[ATTENTION] Dossier data/ vide -- creation d'images factices pour tester...")
@@ -176,9 +173,22 @@ def train():
 
     # Phase 2 : fine-tuning des 30 dernieres couches
     print("\n[CONFIGURATION] Phase 2 -- Fine-tuning...")
-    model.layers[4].trainable = True  # base = layers[4] avec l'augmentation
-    for layer in model.layers[4].layers[:-30]:
-        layer.trainable = False
+    
+    # On cherche la couche qui correspond au modele de base (MobileNetV2)
+    base_layer = None
+    for layer in model.layers:
+        if "mobilenetv2" in layer.name.lower():
+            base_layer = layer
+            break
+    
+    if base_layer:
+        base_layer.trainable = True
+        # On gele toutes les couches sauf les 30 dernieres du modele de base
+        for layer in base_layer.layers[:-30]:
+            layer.trainable = False
+        print(f"[INFO] Fine-tuning active sur les 30 dernieres couches de {base_layer.name}")
+    else:
+        print("[AVERTISSEMENT] Impossible de trouver la couche de base pour le fine-tuning.")
 
     model.compile(
         optimizer=tf.keras.optimizers.Adam(1e-5),
