@@ -8,6 +8,11 @@ MARJ est une application de classification de déchets en temps réel utilisant 
 - **Correction active** : Possibilité de corriger les erreurs de l'IA en direct pour affiner le modèle (Fine-tuning).
 
 ## Installation
+
+> [!IMPORTANT]  
+> Utiliser la version python 3.10 car tensorflow n'a pas de version stable en python 3.13
+> 
+> Télécharger ici : [python 3.10 windows](https://www.python.org/ftp/python/3.11.0/python-3.11.0-amd64.exe)
 ```bash
 pip install -r requirements.txt
 ```
