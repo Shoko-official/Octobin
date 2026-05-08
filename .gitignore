@@ -21,13 +21,6 @@ wheels/
 .installed.cfg
 *.egg
 
-# ML Models & Data
-*.keras
-*.h5
-*.tflite
-data/
-corrections/
-
 # Visualization
 training_curves*.png
 
