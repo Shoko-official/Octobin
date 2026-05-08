@@ -21,13 +21,6 @@ wheels/
 .installed.cfg
 *.egg
 
-# ML Models & Data
-*.keras
-*.h5
-*.tflite
-data/
-corrections/
-
 # Visualization
 training_curves*.png
 
@@ -35,3 +28,10 @@ training_curves*.png
 .vscode/
 .idea/
 .DS_Store
+
+# MARJ Data
+static/uploads/
+corrections/
+*.keras
+labels.txt
+
