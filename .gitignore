@@ -28,3 +28,7 @@ training_curves*.png
 .vscode/
 .idea/
 .DS_Store
+
+# Data and Uploads
+static/uploads/
+corrections/
