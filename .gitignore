@@ -28,3 +28,10 @@ training_curves*.png
 .vscode/
 .idea/
 .DS_Store
+
+# MARJ Data
+static/uploads/
+corrections/
+*.keras
+labels.txt
+

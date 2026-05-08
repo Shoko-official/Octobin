@@ -150,40 +150,54 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     async function envoyer_correction(vrai_label) {
+        const url_a_envoyer = url_image_actuelle; // On capture avant le reset
         retour_initial();
         afficher_toast('Merci !');
 
         try {
-            await fetch('/correct', {
+            const reponse = await fetch('/correct', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    image_url: url_image_actuelle,
+                    image_url: url_a_envoyer,
                     true_label: vrai_label
                 })
             });
+            if (!reponse.ok) throw new Error('Erreur serveur');
+            
+            // On rafraichit les stats en arriere-plan
+            await recup_stats_silence();
         } catch (erreur) {
+            console.error(erreur);
             afficher_toast('Erreur sauvegarde');
         }
     }
 
     async function recup_stats() {
+        await recup_stats_silence();
+        modale_stats.classList.remove('hidden');
+    }
+
+    async function recup_stats_silence() {
         try {
             const reponse = await fetch('/stats');
+            if (!reponse.ok) throw new Error('Erreur chargement stats');
             const data = await reponse.json();
             
             conteneur_stats.innerHTML = '';
-            for (const [label, count] of Object.entries(data)) {
+            
+            // On peut ajouter un petit header si on veut, mais restons sur la grid
+            for (const [label, info] of Object.entries(data.by_label)) {
+                const total = info.session + info.corrections;
                 conteneur_stats.innerHTML += `
                     <div class="stat-item">
-                        <div class="stat-val">${count}</div>
+                        <div class="stat-val">${total}</div>
                         <div class="stat-label">${label}</div>
                     </div>
                 `;
             }
-            modale_stats.classList.remove('hidden');
         } catch (erreur) {
-            afficher_toast('Erreur stats');
+            console.error('Erreur stats:', erreur);
         }
     }
 
