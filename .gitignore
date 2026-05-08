@@ -29,9 +29,8 @@ training_curves*.png
 .idea/
 .DS_Store
 
-# MARJ Data
+# Data and Uploads
 static/uploads/
 corrections/
 *.keras
 labels.txt
-
