@@ -124,9 +124,18 @@ def corriger():
     data = request.json
     url_img = data.get('image_url')
     vrai_label = data.get('true_label')
+    pred_label = data.get('predicted_label')
 
     if not url_img or not vrai_label:
         return jsonify({'error': 'Donnees incompletes'}), 400
+
+    # Ajustement des stats de session : on retire la mauvaise prediction 
+    # et on ajoute la bonne correction dans les stats de session.
+    if pred_label and pred_label != vrai_label:
+        if pred_label in stats_session['predictions'] and stats_session['predictions'][pred_label] > 0:
+            stats_session['predictions'][pred_label] -= 1
+            stats_session['predictions'][vrai_label] = stats_session['predictions'].get(vrai_label, 0) + 1
+            print(f"[STATS] Correction : -1 {pred_label}, +1 {vrai_label}")
 
     # Nettoyage du chemin
     chemin_local = url_img.lstrip('/')
