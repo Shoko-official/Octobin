@@ -1,39 +1,72 @@
-# Octobin - Classification de Déchets
+# Octobin - Waste Classification Prototype
 
-Octobin est une application de classification de déchets en temps réel utilisant le deep learning (MobileNetV2) et TensorFlow/Keras.
+Octobin is a real-time waste classification prototype using **MobileNetV2**, **TensorFlow/Keras**, and **OpenCV**.
 
-## Fonctionnalités
-- **Entraînement** : Script complet pour entraîner le modèle sur des données personnalisées.
-- **Classification en direct** : Interface webcam pour classifier les objets.
-- **Correction active** : Possibilité de corriger les erreurs de l'IA en direct pour affiner le modèle (Fine-tuning).
+The goal is to test a practical workflow: train a small classifier, run webcam inference, collect corrections, and improve the model.
 
-## Installation
+## Features
 
-> [!IMPORTANT]  
-> Utiliser la version python 3.10 car tensorflow n'a pas de version stable en python 3.13
-> 
-> Télécharger ici : [python 3.10 windows](https://www.python.org/ftp/python/3.11.0/python-3.11.0-amd64.exe)
+- Training script with MobileNetV2 transfer learning.
+- Webcam classification interface.
+- Manual correction workflow for misclassified examples.
+- Optional Flask app entry point.
+- Training curves exported as an image.
+
+## Requirements
+
+Recommended Python version: **Python 3.10 or 3.11**.
+
+TensorFlow support depends on your OS and Python version. Avoid Python 3.13 for this project unless TensorFlow support is confirmed for your environment.
+
 ```bash
 pip install -r requirements.txt
 ```
 
-## Utilisation
-1. **Entraînement** :
-   ```bash
-   python train.py
-   ```
-2. **Classification** :
-   ```bash
-   python classify.py
-   ```
-3. **App Flask** :
-   ```bash
-   python app.py
-   ```
+## Expected dataset structure
 
-## Contrôles (Classification)
-- `ESPACE` : Capturer et classifier.
-- `1-4` : Corriger la classe si l'IA s'est trompée.
-- `S` : Relancer un entraînement rapide sur les corrections.
-- `Q` : Quitter.
+```text
+data/
+  train/
+    papier/
+    plastique/
+    verre/
+    organique/
+  val/
+    papier/
+    plastique/
+    verre/
+    organique/
+```
 
+If no dataset is available, the current script can generate small dummy images for testing the pipeline. These dummy images are only for smoke tests and should not be used to evaluate model quality.
+
+## Usage
+
+Train:
+
+```bash
+python train.py
+```
+
+Run webcam classification:
+
+```bash
+python classify.py
+```
+
+Run Flask app:
+
+```bash
+python app.py
+```
+
+## Controls
+
+- `SPACE`: capture and classify
+- `1-4`: correct the predicted class
+- `S`: retrain on collected corrections, if supported by the current script version
+- `Q`: quit
+
+## Project status
+
+Prototype. The model and UX are useful for experimentation, but the project still needs a stronger dataset, tests, evaluation metrics, and reproducible training configuration.
